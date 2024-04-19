@@ -33,8 +33,8 @@ var (
 	commit     = "hash"
 	commitDate = "date"
 
-	requesterNameRegex = regexp.MustCompile(`^fresh/solva/([^/]+)`)
-	attachmentRegex    = regexp.MustCompile(`^fresh/solva/.*/(\d+)/attachments/(\d+)-.*\.(.*)$`)
+	requesterNameRegexp = regexp.MustCompile(`^/([^/]+)`)
+	attachmentRegexp    = regexp.MustCompile(`^/.*/(\d+)/attachments/(\d+)-.*\.(.*)$`)
 )
 
 func Execute() {
@@ -277,7 +277,7 @@ func (a *app) processJSON(ctx context.Context, key string) error {
 		return fmt.Errorf("unmarshal: %v", err)
 	}
 
-	match := requesterNameRegex.FindStringSubmatch(key)
+	match := requesterNameRegexp.FindStringSubmatch(strings.TrimPrefix(key, a.cfg.ExportedPath))
 	target.AWSKey = key
 	target.Raw = object
 	target.DomainID = a.domain
@@ -317,7 +317,7 @@ func (a *app) processAttachment(ctx context.Context, key string) error {
 		err  error
 	)
 
-	f := attachmentRegex.FindStringSubmatch(key)
+	f := attachmentRegexp.FindStringSubmatch(strings.TrimPrefix(key, a.cfg.ExportedPath))
 	if len(f) < 4 {
 		a.log.Warn("key does not match regexp", wlog.Any("key", key))
 
