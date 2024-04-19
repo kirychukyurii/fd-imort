@@ -34,4 +34,5 @@ Flags:
   -v, --version                version for fd-import
   -w, --workers-count int      number of concurrent workers (default 100)
 
-Use "fd-import [command] --help" for more information about a command.```
+Use "fd-import [command] --help" for more information about a command.
+```
