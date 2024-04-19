@@ -1,0 +1,46 @@
+version: "3.9"
+
+networks:
+  webitel:
+
+volumes:
+  postgres-1-data:
+
+services:
+  pg-1:
+    image: docker.io/bitnami/postgresql-repmgr:15.5.0
+    container_name: postgres-1
+    networks:
+      webitel:
+    ports:
+      - "6432:5432"
+    volumes:
+      - postgres-1-data:/bitnami/postgresql
+    environment:
+      - POSTGRESQL_POSTGRES_PASSWORD=webitel
+      - POSTGRESQL_USERNAME=webitel
+      - POSTGRESQL_PASSWORD=webitel
+      - POSTGRESQL_DATABASE=webitel
+      - REPMGR_PASSWORD=repmgrpassword
+      - REPMGR_PRIMARY_HOST=pg-1
+      - REPMGR_PRIMARY_PORT=5432
+      - REPMGR_PARTNER_NODES=pg-1
+      - REPMGR_NODE_NAME=pg-1
+      - REPMGR_NODE_NETWORK_NAME=pg-1
+      - REPMGR_PORT_NUMBER=5432
+      - REPMGR_CONNECT_TIMEOUT=1
+      - REPMGR_RECONNECT_ATTEMPTS=2
+      - REPMGR_RECONNECT_INTERVAL=1
+      - REPMGR_MASTER_RESPONSE_TIMEOUT=5
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U webitel -d webitel" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
