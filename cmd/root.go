@@ -180,9 +180,9 @@ func (a *app) run(ctx context.Context) error {
 	for o := range objpool {
 		eg.Go(func() error {
 			a.bucket.DequeueObjectPool()
-			a.log.Debug("process", wlog.Any("object", o.Key))
-			if err := a.process(gctx, *o.Key); err != nil {
-				return fmt.Errorf("process key (%s): %v", *o.Key, err)
+			a.log.Debug("process", wlog.Any("object", o))
+			if err := a.process(gctx, o); err != nil {
+				return fmt.Errorf("process key (%s): %v", o, err)
 			}
 
 			return nil

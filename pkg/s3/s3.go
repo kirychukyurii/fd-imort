@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/webitel/wlog"
 
 	"github.com/kirychukyurii/fd-import/config"
@@ -46,15 +48,22 @@ type Bucket struct {
 //
 // counter is an unsigned 64-bit integer used to keep track of the number of objects in the queue.
 type objectQueue struct {
-	items   chan *types.Object
+	items   chan string
 	counter uint64
 }
 
 func New(log *wlog.Logger, cfg *config.S3) *Bucket {
+	cli := awshttp.NewBuildableClient()
+	cli.WithTransportOptions(func(transport *http.Transport) {
+		transport.MaxIdleConns = 1000
+		transport.IdleConnTimeout = 90 * time.Second
+	})
+
 	awsc := aws.Config{
 		Region:           strings.ToLower(cfg.Region),
-		Credentials:      credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+		Credentials:      credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "fd-import"),
 		RetryMaxAttempts: 3,
+		HTTPClient:       cli,
 	}
 
 	return &Bucket{
@@ -63,13 +72,13 @@ func New(log *wlog.Logger, cfg *config.S3) *Bucket {
 		cli:      s3.NewFromConfig(awsc),
 		errorsCh: make(chan error),
 		objectQueue: &objectQueue{
-			items:   make(chan *types.Object, MaxListKeys),
+			items:   make(chan string, MaxListKeys),
 			counter: 0,
 		},
 	}
 }
 
-func (b *Bucket) EnqueueObjectPool(obj *types.Object) {
+func (b *Bucket) EnqueueObjectPool(obj string) {
 	atomic.AddUint64(&b.objectQueue.counter, 1)
 	b.objectQueue.items <- obj
 }
@@ -78,7 +87,7 @@ func (b *Bucket) DequeueObjectPool() {
 	atomic.AddUint64(&b.objectQueue.counter, ^uint64(0))
 }
 
-func (b *Bucket) ObjectPool() chan *types.Object {
+func (b *Bucket) ObjectPool() chan string {
 	return b.objectQueue.items
 }
 
@@ -116,7 +125,7 @@ func (b *Bucket) ListObjects(ctx context.Context, key string, lastKey string) er
 
 		b.log.Debug("fetched page", wlog.Int("page", i), wlog.Int("len", len(page.Contents)))
 		for _, obj := range page.Contents {
-			b.EnqueueObjectPool(&obj)
+			b.EnqueueObjectPool(*obj.Key)
 		}
 	}
 
