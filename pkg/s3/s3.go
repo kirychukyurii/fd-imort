@@ -61,9 +61,11 @@ func New(log *wlog.Logger, cfg *config.S3) *Bucket {
 
 	awsc := aws.Config{
 		Region:           strings.ToLower(cfg.Region),
-		Credentials:      credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, "fd-import"),
+		Credentials:      credentials.NewStaticCredentialsProvider(cfg.AccessKeyID, cfg.SecretAccessKey, ""),
+		RetryMode:        aws.RetryModeStandard,
 		RetryMaxAttempts: 3,
 		HTTPClient:       cli,
+		DefaultsMode:     aws.DefaultsModeCrossRegion,
 	}
 
 	return &Bucket{
@@ -148,6 +150,9 @@ func (b *Bucket) HeadObject(ctx context.Context, key string) (*s3.HeadObjectOutp
 
 // ReadObject gets an object from a bucket and stores it in a local file.
 func (b *Bucket) ReadObject(ctx context.Context, key string) ([]byte, error) {
+	var i int
+
+start:
 	req := &s3.GetObjectInput{
 		Bucket: aws.String(b.name),
 		Key:    aws.String(key),
@@ -161,7 +166,13 @@ func (b *Bucket) ReadObject(ctx context.Context, key string) ([]byte, error) {
 	defer result.Body.Close()
 	body, err := io.ReadAll(result.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read all body: %v", err)
+		i++
+		b.log.Error("failed to read object body, repeat", wlog.Int("len", len(body)), wlog.Err(err),
+			wlog.String("key", key), wlog.Int("attempt", i))
+
+		// FIXME
+		goto start
+		// return nil, fmt.Errorf("read all body: %v", err)
 	}
 
 	return body, nil
