@@ -33,8 +33,9 @@ var (
 	commit     = "hash"
 	commitDate = "date"
 
-	requesterNameRegexp = regexp.MustCompile(`^/([^/]+)`)
-	attachmentRegexp    = regexp.MustCompile(`^/.*/(\d+)/attachments/(\d+)-.*\.(.*)$`)
+	requesterNameRegexp        = regexp.MustCompile(`^/([^/]+)`)
+	attachmentRegexp           = regexp.MustCompile(`^/.*/(\d+)/attachments/(\d+)-.*\.(.*)$`)
+	attachmentWithoutExtRegexp = regexp.MustCompile(`^/.*/(\d+)/attachments/(\d+)-.*$`)
 )
 
 func Execute() {
@@ -313,22 +314,29 @@ func (a *app) processJSON(ctx context.Context, key string) error {
 
 func (a *app) processAttachment(ctx context.Context, key string) error {
 	var (
-		file string
-		err  error
+		ticketID     string
+		attachmentID string
+		extension    string
+		file         string
+		fileName     string
+		err          error
 	)
 
 	f := attachmentRegexp.FindStringSubmatch(strings.TrimPrefix(key, a.cfg.ExportedPath))
 	if len(f) < 4 {
-		a.log.Warn("key does not match regexp", wlog.Any("key", key))
-
-		return nil
+		f = attachmentWithoutExtRegexp.FindStringSubmatch(strings.TrimPrefix(key, a.cfg.ExportedPath))
+		ticketID = f[1]
+		attachmentID = f[2]
+		fileName = attachmentID
+	} else {
+		ticketID = f[1]
+		attachmentID = f[2]
+		extension = f[3]
+		fileName = fmt.Sprintf("%s.%s", attachmentID, extension)
 	}
 
-	ticketID := f[1]
-	attachmentID := f[2]
-	extension := f[3]
 	attachmentPath := filepath.Join(a.cfg.AttachmentDir, ticketID)
-	file = filepath.Join(attachmentPath, fmt.Sprintf("%s.%s", attachmentID, extension))
+	file = filepath.Join(attachmentPath, fileName)
 	if filestorage.IsExist(file) {
 		a.log.Debug("exists", wlog.String("key", key), wlog.String("file", file))
 
