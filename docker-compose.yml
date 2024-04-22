@@ -5,8 +5,20 @@ networks:
 
 volumes:
   postgres-1-data:
+  grafana-data:
 
 services:
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      webitel:
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+
   pg-1:
     image: docker.io/bitnami/postgresql-repmgr:15.5.0
     container_name: postgres-1
