@@ -97,28 +97,21 @@ func (b *Bucket) ObjectPool() chan string {
 func (b *Bucket) ListObjects(ctx context.Context, key string, lastKey string) error {
 	defer close(b.objectQueue.items)
 	req := &s3.ListObjectsV2Input{
-		Bucket: aws.String(b.name),
-		Prefix: aws.String(key),
+		Bucket:  aws.String(b.name),
+		Prefix:  aws.String(key),
+		MaxKeys: aws.Int32(MaxListKeys),
 	}
 
 	if lastKey != "" {
 		req.StartAfter = aws.String(lastKey)
 	}
 
-	p := s3.NewListObjectsV2Paginator(b.cli, req, func(o *s3.ListObjectsV2PaginatorOptions) {
-		if v := int32(MaxListKeys); v != 0 {
-			o.Limit = v
-		}
-	})
+	p := s3.NewListObjectsV2Paginator(b.cli, req)
 
 	// Iterate through the S3 object pages, printing each object returned.
 	var i int
 	for p.HasMorePages() {
 		i++
-
-		/*if i == 2 {
-			return nil
-		}*/
 
 		page, err := p.NextPage(ctx)
 		if err != nil {
@@ -170,7 +163,7 @@ start:
 		b.log.Error("failed to read object body, repeat", wlog.Int("len", len(body)), wlog.Err(err),
 			wlog.String("key", key), wlog.Int("attempt", i))
 
-		// FIXME
+		// FIXME: connection reset by peer
 		goto start
 		// return nil, fmt.Errorf("read all body: %v", err)
 	}
@@ -188,6 +181,7 @@ func (b *Bucket) DownloadObject(ctx context.Context, key, filepath string) error
 	if err != nil {
 		return fmt.Errorf("create file: %v", err)
 	}
+
 	defer file.Close()
 	_, err = file.Write(object)
 	if err != nil {
