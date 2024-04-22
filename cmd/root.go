@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"syscall"
 
 	"github.com/spf13/cobra"
@@ -92,16 +93,24 @@ func command() *cobra.Command {
 				dbpool: dbpool,
 				bucket: s3.New(log, cfg.S3),
 				keys:   make(map[string][]string),
+				stats: &stats{
+					processed:   atomic.Uint64{},
+					exists:      atomic.Uint64{},
+					tickets:     atomic.Uint64{},
+					attachments: atomic.Uint64{},
+				},
 			}
 
 			// This blocks until the context is finished or until an error is produced
 			if err = a.run(ctx); err != nil {
 				a.log.Error("run app", wlog.Err(err))
-
-				return err
 			}
 
-			return nil
+			a.log.Info("processed items", wlog.Any("processed", a.stats.processed.Load()),
+				wlog.Any("exists", a.stats.exists.Load()), wlog.Any("tickets", a.stats.tickets.Load()),
+				wlog.Any("attachments", a.stats.attachments.Load()))
+
+			return err
 		},
 	}
 
@@ -139,6 +148,14 @@ type app struct {
 
 	domain int64
 	keys   map[string][]string
+	stats  *stats
+}
+
+type stats struct {
+	processed   atomic.Uint64
+	exists      atomic.Uint64
+	tickets     atomic.Uint64
+	attachments atomic.Uint64
 }
 
 // run executes the main logic of the application. It performs the following steps:
@@ -213,6 +230,7 @@ func (a *app) run(ctx context.Context) error {
 //   - Otherwise, calls the `processAttachment` method to process the attachment.
 //   - Returns any processing errors that occur.
 func (a *app) process(ctx context.Context, key string) error {
+	a.stats.processed.Add(1)
 	ok, err := a.dbpool.Ticket(ctx, a.domain, key)
 	if err != nil {
 		if !errors.Is(err, db.ErrDBNoExists) {
@@ -221,16 +239,19 @@ func (a *app) process(ctx context.Context, key string) error {
 	}
 
 	if ok {
+		a.stats.exists.Add(1)
 		a.log.Debug("exists", wlog.Any("key", key))
 
 		return nil
 	}
 
 	if strings.Contains(key, "/attachments/") {
+		a.stats.attachments.Add(1)
 		if err := a.processAttachment(ctx, key); err != nil {
 			return fmt.Errorf("attachment: %v", err)
 		}
 	} else {
+		a.stats.tickets.Add(1)
 		if err := a.processJSON(ctx, key); err != nil {
 			return fmt.Errorf("json: %v", err)
 		}
