@@ -17,6 +17,12 @@ run:
 		--s3.access-key ${AWS_ACCESS_KEY} --s3.secret-key ${AWS_SECRET_KEY} --s3.region ${AWS_REGION} \
 		--s3.bucket ${AWS_S3_BUCKET} --domain ${DOMAIN_NAME} --workers-count ${WORKERS} --dsn ${DSN}
 
+## run: Build and run the application
+.PHONY: run/api
+run/api: build
+	./bin/${PROJECTNAME} api --log-level ${LOG_LEVEL} --log-file ${LOG_FILE} \
+		--dsn ${DSN} --access-token ${ACCESS_TOKEN}
+
 ## help: Help about any command
 .PHONY: help
 help: Makefile

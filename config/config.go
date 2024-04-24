@@ -16,6 +16,11 @@ type S3 struct {
 	Bucket          string
 }
 
+type Server struct {
+	Address string
+	Token   string
+}
+
 // Config represents a configuration object that is used to store application settings.
 //
 // LogLevel is the log level for the application.
@@ -36,10 +41,12 @@ type Config struct {
 	Domain        string
 	DSN           string
 	S3            *S3
+	Server        *Server
 }
 
 func New() *Config {
 	return &Config{
-		S3: &S3{},
+		S3:     &S3{},
+		Server: &Server{},
 	}
 }

@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1
 	github.com/jackc/pgx/v5 v5.5.5
-	github.com/pressly/goose/v3 v3.19.2
+	github.com/pressly/goose/v3 v3.20.0
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
