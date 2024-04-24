@@ -10,29 +10,25 @@ Easy import .json files, exported from API
 ## Getting Started
 
 ```
+FreshDesk Import - easy import .json files, exported from API
+
 Usage:
   fd-import [flags]
   fd-import [command]
 
 Available Commands:
+  api         API for download ticket attachments
   completion  Generate the autocompletion script for the specified shell
   help        Help about any command
+  import      Start importing .json files
   migrate     Apply database schema migrations
 
 Flags:
-  -a, --attachment string      directory to store attachment files (default "./attachments")
-      --domain string          domain name
-  -d, --dsn string             database connection string
-  -h, --help                   help for fd-import
-      --log-file string        log file (default "./fd-import.log")
-  -l, --log-level string       log level (default "debug")
-  -p, --path string            base path to exported files (default "./export-data")
-      --s3.access-key string   S3 access key ID
-      --s3.bucket string       S3 bucket
-      --s3.region string       S3 region
-      --s3.secret-key string   S3 secret access key
-  -v, --version                version for fd-import
-  -w, --workers-count int      number of concurrent workers (default 100)
+  -d, --dsn string         database connection string
+  -h, --help               help for fd-import
+      --log-file string    log file (default "./fd-import.log")
+  -l, --log-level string   log level (default "debug")
+  -v, --version            version for fd-import
 
 Use "fd-import [command] --help" for more information about a command.
 ```
